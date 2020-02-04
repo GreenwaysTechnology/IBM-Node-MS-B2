@@ -1880,17 +1880,597 @@ getUser()
 
 console.log('going on')
 
+///////////////////////////////////////////////////////////////////////////////////////////
+
+Promise has limitions;
+......................
+
+1.Promise is still  complex when you start scalling complex async operations.
+
+2.Which is not readable ,which uses lot of then, catch blocks
+
+In order to write even simple complex async work flows ES 7 introduced
+a concept called "async await" keywords
+
+
+ It is simplest pattern of Promises.
+ It is promise driven only.
+
+ "Sync style of Async Code" 
+
+
+async key must be used with function declaration.
+await is used to pause async calls
+
+
+async function:
+
+by default which returns promise object what ever you return.
+
+
+//async await
+
+async function sayGreeter() {
+    return "Welcome"; //Promise.resolve("Welcome")
+}
+console.log('start')
+sayGreeter().then(result => console.log(result));
+console.log('end')
+
+async function getCounter() {
+    return Promise.resolve(10);
+}
+getCounter().then(result => console.log(result));
+
+
+async function startFlow() {
+    //promise
+    try {
+        let fakeUser = {
+            name: 'subramanain'
+        }
+        //let fakeUser;
+        let promise = fakeUser ? Promise.resolve(fakeUser) : Promise.reject({
+            err: 'Something went wrong'
+        });
+        let result = await promise; //await keyword passes the current 
+        //execution in background ,once success , it result result
+        console.log(result);
+    } catch (err) {
+        console.log(err);
+    }
+}
+startFlow()
+
+///////////////////////////////////////////////////////////////////////////////////////
+
+Conculssion:
+ callback===>promise===>async await.
+ Generators,Iterators: refer
+..............................................................................................
+
+What is node js?
+
+Node.js is javascript runtime built on top of Google V8 JAVASCRIPT Engine.
+
+
+Why node was created?
+
+Ryan Dahl who created NODE JS for building IO Non blocking application using java script language.
+
+Javascript language was invented for DOM(web document) programming only.
+
+JS has no any IO API like other java,c,c++
+
+IO is part of every pl who carries blocking operations  for long time.
+
+eg:
+ if y using java, java uses an io lib to read /write data in files in disk or in network(servlets) using jvm threading model.
+
+Process level threads has limitations
+
+1.deadlock
+2.race conditions
+3.resource utilization
+etc...
+
+Web Computing and threads:
+..........................
+
+Client-----request---http----------------WebContainer(TOMCAT)---new thread---starts req-res
+						|
+Client-----request---http--             (JVM+HTTPSERVER)
+
+
+IO : READ + WRITE 
+
+NONBLOCKING IO ;DONT BLOCK MAIN PROCESS FOR IO OPERATIONS.
+
+ "Node is nonblocking,async,event driven io platform to build large scale distributed,web,io intensive applications"
+
+Node was born from google opensouce project called "V8".
+
+
+Node Architecture:
+..................
+Please refer image.
+............................................................................................
+
+Session plan inside node:
+
+1.node REPL
+2.Node Application Modularity
+3.npm 
+4.NODE IO
+   -FILE IO
+   -NETWORK IO : WEB.
+
+/////////////////////////////////////////////////////////////////////////////////////
+
+node REPL : Read Evaluate print loop
+ ->interactive command line utility.
+
+js code can be executed on REPL mode or node file mode.
+
+............................................................................................
+
+without repl mode:
+
+ >node  fileName.js
+
+ >node folderName/fileName.js
+
+............................................................................................
+
+Node was created only for io intensive applications , not for browser apps.
+
+React,Angular,JQuery => Browser specific objects
+
+Browser specfic objects not available in node
+
+node has all javascript objects expect browser specfic one
+
+eg:
+Math,JSON,Date,String,Number........ : ISMORPHIMSM 
 
 
 
+In browser window is super object
+
+In Node Process is super object : WHich prints info node itself.
+
+............................................................................................
+
+Modularity:
+
+In java Modularity , is presented via "Packages"
+
+Package organize the code  logically.
+
+Customer.java
+
+package com.ibm.cms
+
+public class Customer{}
+
+Java organizes code folders and files Physically.
+
+d:/javaapps/src/
+    com/ibm/src/Customer.java
+
+What about javascript Modularity?
+
+ Javascript is file based modularity physically
+ but logically there is no such modularity at language level.
+
+ collection of variable declarations and function.
+
+Once js started growing in large scale, dev struck to organize code.
+
+2000, Smart developers started thinking about how to modualrize js code.
+ Module design patterns came.
+
+Modularity Design Patterns:
+
+1.Namespace design pattern : 2000 : jquery
+2.AMD -Async Module Defintion : dojo
+3.CJS - Common JS
+4.ES 6 Module design pattern  = amd + cjs
+5.System = AMD = CJS + ES 6
+6.UMD = NAMESPACE + AMD + CJS = ES 6
+
+i can organize the code , based on these patterns, but what about runtimes?
+  js runtime never suppport these patterns directly then each design pattern is lib.
 
 
+ Modularity : code sharing across files .
 
+How to share and how link?
 
+amd : design pattern
+ -require.js : loader program for amd design pattern
 
-
-
-
-
-
+cjs : design pattern
+  When node was released, node used cjs as in built design pattern.
+ node has in built loader, so when you use node with cjs , loader is not necssary.
  
+
+ES 6 mODULES: design pattern 
+  It is introduced as part of es 6 spec.
+es 6 is more popular
+node wont support es 6 module directly, that means you need loader for es6 on node.
+ 
+Popular loader : webpack.
+
+****************************......................***************************************
+COmmon js:
+
+1.How to share code
+  exports
+  module.exports
+
+2.How to link files
+  require()
+ 
+code : 
+
+ variable declaration
+ function declaration
+ class declaration
+ 
+  exports
+  module.exports
+
+////////////////////////////////////////////////////////////////////////////////////////////
+
+Javascript objects:
+
+Javascript objects are allocated in heap memory.
+
+Object mememory layout.
+
+Object in javascript is "Dictionary-Map-Hashtable" : key: value
+
+Object Augmentation :
+
+ During runtime, object properties can be added,deleted,updated,iterated.
+
+//Adding new property during runtime.
+
+// function Employee(){
+//   this.id =1;
+// }
+// let emp = new Employee();
+
+let emp = {
+    id:1
+}
+
+//Add new property
+emp.name = 'Subramanian'
+emp.salary =9000;
+
+//update existing property
+emp.name = 'Ram'
+
+//delete existing property
+delete emp.salary
+
+//iterate
+for (const key in emp) {
+   console.log(key,emp[key])
+}
+
+console.log(emp);
+
+//Empty object
+let map = {};
+console.log(map);
+map.lat =1999.89
+console.log(map);
+
+module.exports
+
+
+
+class Customer {
+    constructor(){
+        console.log('Customer class')
+    }
+}
+
+module.exports = Customer;
+
+const result = require('./greeter')
+const Customer = require('./Customer');
+
+console.log(`${result.message} ${result.name} ${result.sayGreet()}`);
+
+new Customer()
+
+exports vs module.exports
+
+exports returns an object in which you can pack all code
+module.exports returns the code as it is.
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
+Object destrucing: ES 6 
+
+//object destructuring : breaking the object properties
+
+
+// function getEmployee(emp) {
+
+//     const { id, name, salary, department } = emp;
+
+//     //console.log(`Id ${emp.id} name : ${emp.name} salary ${emp.salary} ${emp.department}`)
+//     console.log(`Id ${id} name : ${name} salary ${salary} ${department}`)
+// }
+
+// const getEmployee = emp => {
+//     const { id, name, salary, department } = emp;
+//     console.log(`Id ${id} name : ${name} salary ${salary} ${department}`)
+// }
+const getEmployee = ({ id, name, salary, department }) => 
+ console.log(`Id ${id} name : ${name} salary ${salary} ${department}`)
+
+
+getEmployee({
+    id: 1,
+    name: 'Subramanian',
+    salary: 2000,
+    department: 'Training'
+});
+
+//const result = require('./greeter')
+const { message, name, sayGreet } = require('./greeter')
+const Customer = require('./Customer');
+
+//console.log(`${result.message} ${result.name} ${result.sayGreet()}`);
+console.log(`${message} ${name} ${sayGreet()}`);
+new Customer()
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+node application:
+
+collection files and code.
+
+node modules:
+
+ File which contains javascript code, that can be distributed.
+
+Types of node modules:
+
+1.Node in built module
+2.Node third party module
+
+
+
+1.Node in built module
+
+1.os
+ Operating system releated features.
+
+
+const os = require('os')
+
+console.log(os.cpus());
+console.log(os.arch())
+
+
+points:
+
+ require('os') vs require('./greeter');
+                     
+without ./ means, node runtime uses env settings to lookup js files automatically
+./ means , lookup js files in the current dir.
+
+
+how node look up js files?
+
+node will look up files in this order
+
+  project-folder
+             ---node_modules	
+			---not present
+				 |
+				node installation folder(c drive)
+					|
+					node_modules
+						|
+						 present : load those files
+					else
+					  - throw errors.
+
+
+
+Error:
+internal/modules/cjs/loader.js:800
+    throw err;
+    ^
+
+Error: Cannot find module 'osggg'
+Require stack:
+- C:\session\mynode-apps\src\index.js
+[90m    at Function.Module._resolveFilename (internal/modules/cjs/loader.js:797:15)[39m
+[90m    at Function.Module._load (internal/modules/cjs/loader.js:690:27)[39m
+[90m    at Module.require (internal/modules/cjs/loader.js:852:19)[39m
+[90m    at require (internal/modules/cjs/helpers.js:74:18)[39m
+    at Object.<anonymous> (C:\session\mynode-apps\src\index.js:2:12)
+[90m    at Module._compile (internal/modules/cjs/loader.js:959:30)[39m
+[90m    at Object.Module._extensions..js (internal/modules/cjs/loader.js:995:10)[39m
+[90m    at Module.load (internal/modules/cjs/loader.js:815:32)[39m
+[90m    at Function.Module._load (internal/modules/cjs/loader.js:727:14)[39m
+[90m    at Function.Module.runMain (internal/modules/cjs/loader.js:1047:10)[39m {
+  code: [32m'MODULE_NOT_FOUND'[39m,
+  requireStack: [ [32m'C:\\session\\mynode-apps\\src\\index.js'[39m ]
+
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+How to write event driven programming using module called "Event Emitter".
+
+ Node is 100% event driven platform,
+
+Programs are communicating with each other by sending signals.
+
+node provides in built module called "events"
+
+There are Actors:
+
+ 1.Producer
+        send signals and data
+
+ 2.Listener/subscriber
+     who have registered to listen signal , and for data.
+    callback function /handler function.
+
+
+ //event driven programming
+
+//event driven programming
+
+const EventEmitter = require('events');
+
+//eventEmitter Object
+let events = new EventEmitter();
+
+//Subscriber
+events.on('wakeup', function (data) {
+    console.log(`wake up signal got : ${data}`)
+});
+
+//Producer
+events.emit('wakeup', 'Hello Good Evening');
+events.emit('wakeup', 'Hello Getting late');
+
+/////////////////////////////////////////////////////////////////////////////////////////
+
+//make inventory as event driven
+class Inventory extends EventEmitter {
+    constructor() {
+        super();
+
+        //subscribe events
+        this.on('increment', function (stock) {
+            //biz logic
+            console.log(`Stock has been incremented ${stock}`);
+        })
+
+        this.on('decrement', function (stock) {
+            console.log(`Stock has been decremented ${stock}`);
+        })
+
+    }
+    //biz methods
+    incrementStock(stock = 1) {
+        this.emit('increment', stock);
+    }
+    decrementStock(stock = 1) {
+        this.emit('decrement', stock);
+    }
+}
+
+let inv = new Inventory();
+inv.incrementStock(100);
+inv.decrementStock(10);
+////////////////////////////////////////////////////////////////////////////////////////////
+
+Node and IO:
+
+Node is used to build non block io.
+
+ Node initallly desinged for non blocking.
+
+Does node support blocking io?
+  Yes!
+Blocking io is very danagerous.
+  but still node supports, dont unnecessarly use blocking io code in app.
+
+How node supports blocking io?
+  Via "Thread Pools".
+  
+Types of IO
+
+1.fs io
+2.network io
+  -http : web apps
+
+
+
+Use case :non blocking fs io 
+
+const fs = require('fs');
+
+const fileName = './src/info.txt';
+const config = {
+    encoding: 'UTF-8'
+};
+
+console.log('start')
+fs.readFile(fileName, config, function (err, data) {
+    //handle error
+    if (err) throw err;
+    console.log(data);
+});
+//readFile---stack---will communicate--libuv---readFile api(c)---os kernal--assigns thread-->
+//start reading file---once file read operation is completd---emits signal-->libvu stores
+//handler function inside queue---event loop--->checks whether v8 stack empty--->push handler
+//function -- to print data, which was already read.
+console.log('end');
+
+Use case : Write file using nonblocking.
+
+const fs = require('fs');
+//
+//write file
+const writeFilepath = './src/info-copy.txt';
+
+const data = 'This is node IO file!';
+
+const config = {
+    encoding: 'UTF-8'
+};
+
+console.log('start')
+
+fs.writeFile(writeFilepath, data, config, function (err) {
+    if (err) throw err;
+    console.info(`The file ${writeFilepath} has been written!`)
+});
+console.log('end')
+
+////////////////////////////////////////////////////////////////////////////////////////
+
+Blocking IO : io operations never handled by os kernal , rather than , node(libuv)
+thread pool is used.
+
+Note:
+1.Dont use blocking io apis for big files
+2.Dont use blocking io apis in network applications.
+3.Node supports only disk file io in blocking mode, not network apis
+
+Node blocking io Operations:
+.........................
+
+fs.readFileSync()
+fs.writeFileSync()
+
+
+Use case : Blocking IO USING fs
+
+const fs = require('fs');
+
+
+const filePath = './src/info.txt';
+const config = {
+      encoding: 'UTF-8'
+}
+console.log('start');
+const data = fs.readFileSync(filePath, config);
+console.log(data);
+console.log('end')
+
+

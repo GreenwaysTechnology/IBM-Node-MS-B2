@@ -31,4 +31,4 @@ async function startFlow() {
         console.log(err);
     }
 }
-startFlow()
+startFlow();
