@@ -1,68 +1,34 @@
-//Complex Callback pattens using promise
 
-/**
-const getUser = () => {
-    let fakeUser = {
-        id: 1,
-        name: 'admin',
-        password: 'admin'
-    };
-    if (fakeUser) {
-        return Promise.resolve(fakeUser);
-    } else {
-        return Promise.reject({
-            err: 'No User found'
-        });
-    }
-};
-**/
-const getUser = () => {
-    return new Promise((resolve, reject) => {
-        let fakeUser = {
-            id: 1,
-            name: 'admin',
-            password: 'admin'
-        };
-        if (fakeUser) {
-            setTimeout(() => {
-                resolve(fakeUser)
-            }, 2000);
-        } else {
-            setTimeout(() => {
-                reject({
-                    err: 'User not Available'
-                })
-            }, 2000);
-        }
-    });
-};
+//async await
 
-const login = user => {
-    return new Promise((resolve, reject) => {
-        if (user.name === 'admin') {
-            setTimeout(() => resolve({
-                loginsuccess: 'valid User'
-            }), 1000);
-        } else {
-            setTimeout(() => reject({
-                err: 'Invaild User',
-                code: 400,
-            }), 1000);
-        }
-    });
+async function sayGreeter() {
+    return "Welcome"; //Promise.resolve("Welcome")
 }
+console.log('start')
+sayGreeter().then(result => console.log(result));
+console.log('end')
 
-// getUser()
-//     .then(user => console.log(user))
-//     .catch(err => console.log(err))
-//     .finally(() => console.log('finally'))
+async function getCounter() {
+    return Promise.resolve(10);
+}
+getCounter().then(result => console.log(result));
 
-getUser()
-    .then(user => login(user))
-    .then(() => console.log('login Success'))
-    .catch(err => {
-        console.log(err)
-    })
-    .finally(() => console.log('async operation is done'))
 
-console.log('going on')
+async function startFlow() {
+    //promise
+    try {
+        let fakeUser = {
+            name: 'subramanain'
+        }
+        //let fakeUser;
+        let promise = fakeUser ? Promise.resolve(fakeUser) : Promise.reject({
+            err: 'Something went wrong'
+        });
+        let result = await promise; //await keyword passes the current 
+        //execution in background ,once success , it result result
+        console.log(result);
+    } catch (err) {
+        console.log(err);
+    }
+}
+startFlow()
