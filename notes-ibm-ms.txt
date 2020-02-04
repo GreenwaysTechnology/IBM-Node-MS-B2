@@ -1373,8 +1373,512 @@ console.log(locationInfo.country.state.district.name)
 Object internal structure:
 
 ASYNC programming
+
 scope chain
 
+What is async/sync  programming?
+
+Sync programming : sequential execution
+
+
+Javascript engine archiecture : V8
+
+
+What is javascript engine/runtime?
+
+ It is program written in c / c++ /any language.
+ v8 is c++ program written by google, used inside chrome and nodejs
+
+Program  : collection of instructions
+
+Types of Program:
+
+1.passive program
+   The program which is not in ram or which is in hard disk or the program which is not accessed by CPU.
+
+2.Active program
+  The program which is in ram, which is accssed by cpu :  Process.
+
+Process: Program in execution
+
+eg:
+
+ v8 which is hard disk
+  when you run/execute
+  v8 is moved from harddisk to ram :  Process.
+
+
+Note: Any process on any os, has structure : process layout / memory layout,
+  any thing if you move on ram, will have common structure.
+
+
+Process layout:
+
+1.heap
+2.stack
+3.Program data
+
+
+
+source code : index.js
+
+ Steps 
+
+0.Loading
+
+    The process of reading source code from local disk or from remote machine via networks
+
+1.compilation
+   Javascript engine has in built compiler(Parser-Lexical parser)
+
+compiler ;
+ Hello.java ---javac ---- Hello.class(assembly)-----feed into runtime--->Exection
+ 
+Parser:
+ index.js----parser--->breaks javascript into string tree--->feed into runtime---> convert
+ tree into assembly instruction--->execution
+
+
+2.Execution
+ tree into assembly instruction--->execution
+ memory allocation happens for our code.
+
+
+How execution begins?
+
+ Any language , execution begins from main method.
+ 
+Does js has main method?
+  
+  Yes!, which is supplied by runtime.
+
+
+
+index.js
+
+function sayHello(){
+     console.log('hello')
+}
+function sayHai(){
+  console.log('hai');
+}
+
+sayHello();
+sayHai();
+   |
+
+ parser
+   |
+
+ parsed program
+   |
+ Execution
+   |
+  main function
+   |
+ sayHello();---->FUNCTION call should be moved to RAM(MEMORY ALLOCATION FOR function).
+
+Note: if you allocate memory, os will maintain structure.
+
+Where is function is allocated? and what is its structure?
+
+ Function memory is allocated inside "STACK"
+
+function  invocation means, we are pushing function into stack.
+
+ add()------->push---into--stack ------>stack will allocate memory----"Stack Frame"
+
+Stack frame:
+
+ contains
+ local variables
+ return address
+
+once frame is completed its operation, then will be removed from main memory.
+
+all functions are pushed and pop sequencially : Sync Programming.
+
+
+Threads:
+ What is thread?
+
+  A stack frame is called "thread".
+
+
+If you are running more than one stack frame at the same time, we call "Multi threading".
+
+Yes ,we can have multi threading :Concurrency.
+
+Java and other languages support multi threading
+
+Javascript engine never support multi threading. only one frame only we can run.: Single Threaded.
+
+//sync
+
+function add(){
+   let result = 10 + 10;
+}
+
+function sayHello(){
+     console.log('hello')
+}
+function sayHai(){
+  console.log('hai');
+}
+
+add();//---pushed into stack--frame is created--running-completed
+sayHello();//---pushed into stack--frame is created--running-completed
+sayHai();//---pushed into stack--frame is created--running-completed
+
+
+
+Use case : what if a frame is running long long time. 
+  eg: 
+   a function which connects network socket, getting 1 million data, fromating data.
+
+during that time, what will happen to rest of the Program?
+
+       "Blocking State" : Application will be blocked until, the frame is removed memory.
+
+Lets imagine , you have executed js code inside browser, one function halts the entire browser
+to continue.
+
+
+What is the solution js offers inside of multi threading?
+
+ Yes! : Async Programming : Another way of achiving concurrency.
+
+
+What is node js?
+       NonBlocking,Async Platform 
+
+
+
+NonBlocking/Async/  Architecture:
+
+ This is not only for node js 
+
+ Async architecture is designed based on one design pattern "Reactor Design Pattern"
+
+
+ 1. worker - thread model
+   The main process (Node/Browser)never creates stack frame(thread) rather than it will
+  move the control to os kernal space.
+
+ 2.Events - Event Driven Programming
+    Signal : completed,connected,closed......
+
+ 3.Handler function : callbacks
+    The function which has been assigned for handling results.
+
+ 4.Event Queue(Task Queue)
+    It is data structure which has completed job references in the form of functions
+    - callback functions
+
+ 5.Event loop
+    It is program which keeps on checking the queue whether any message should be
+   processed : for what , in order to send results back to clients.
+
+ Event loop can push callbacks into stack only if "stack is empty"
+   
+..........................................................................................
+
+ api---push--javascript engine--stack----delagate to os kernal--- keeps on runnning on os kernal-- once done--kernal gives signal to javascript engine--- queue---event loop process the first message --if stack is empty--push that handler function to stack---stack will process the frame-result is returned to client.
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+Async Programming and implemenation:
+....................................
+
+Note: dont create frames for any complex task.
+
+
+Rules /Steps:
+
+1.any async operation must be handed to libuv(Which is low level c program bundled with node distribution).
+  lets say add function can it be async ?
+   no: add has no eq low level api.
+
+What are low level apis?
+
+ Browser:
+    timers
+ setTimeout
+ xhr: ajax : network api
+ .....
+
+ Node :
+   timers
+  setTimeout   
+  .....
+
+2.function should be passed as parameter : callbacks : Queue Message
+
+............................................................................................
+
+Progamming Implementation:
+
+1.callback pattern
+2.Promise
+3.async await
+4.Generators   
+
+
+
+callbacks:
+
+1.timers
+
+
+
+The async code:
+
+//Async implementation Using timer
+function sayGreeter(handler) {
+ //Delegate to kernal /os
+ setTimeout(function(){
+     handler();
+ },1000);
+}
+
+function add(a, b) {
+    return a + b;
+}
+
+sayGreeter(function(){
+    console.log(' i wil be called late')
+});//pushed into stack--settimeout---delegate to os---timer is 
+ //ticking--|control is released starts execution next line --timeout----
+   //--->signal "wake up"---node stores message in the event queue--loop--pick up message from
+// event queue-- check whether stack is empty----push that handler into stack--display message
+ //"i will be called late"
+console.log(add(10,10));
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+Callbacks:
+
+  call - invoke
+  back - future
+
+callback pattern is core pattern for async programming.
+
+callback programming and its complexcity ::"Callback hell"
+
+
+Objective:
+  "The result(output) of one async operation , will be input to the next operation"
+
+//callback hell
+const getUser = (success, failure) => {
+    //fake data
+    let user = {
+        id: 1,
+        name: 'admin',
+        password: 'admin'
+    };
+    //let user = null;
+    if (user) {
+        setTimeout(() => success(user), 1000);
+    } else {
+        setTimeout(() => failure({ err: 'User Not found' }))
+    }
+};
+
+const login = (user, success, failure) => {
+    //biz logic
+    if (user.name === 'admin') {
+        setTimeout(() => {
+            success({ status: 'Login Success' })
+        })
+    } else {
+        setTimeout(() => {
+            failure({ status: 'Login failed' })
+        })
+    }
+};
+
+//two callback functions
+//getUser(user => console.log(user), err => console.log(err));
+
+//with input to login functon
+getUser(user =>
+    login(user, authInfo => console.log(authInfo), err => console.log(err)),
+    err => console.log(err));
+
+
+
+Questions:
+
+1.Whether this is able to understand quickly
+2.Whether this code is able to debug
+3.Whehter this code is scalable?
+4.whether this code is maintaiable?
+
+  "No" : This is what we call as "Callback hell".
+
+fs.readdir(source, function (err, files) {
+  if (err) {
+    console.log('Error finding files: ' + err)
+  } else {
+    files.forEach(function (filename, fileIndex) {
+      console.log(filename)
+      gm(source + filename).size(function (err, values) {
+        if (err) {
+          console.log('Error identifying file size: ' + err)
+        } else {
+          console.log(filename + ' : ' + values)
+          aspect = (values.width / values.height)
+          widths.forEach(function (width, widthIndex) {
+            height = Math.round(width / aspect)
+            console.log('resizing ' + filename + 'to ' + height + 'x' + height)
+            this.resize(width, height).write(dest + 'w' + width + '_' + filename, function(err) {
+              if (err) console.log('Error writing file: ' + err)
+            })
+          }.bind(this))
+        }
+      })
+    })
+  }
+})
+
+callback is other wise called as doom of pyrbid.
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+How to write better callback programming? or How to avoid callback hell?
+
+
+In 2005, JQUERY team started with working complex callback patterns, they found callback
+hell problem.
+
+They proposed a  Design pattern to write better callback programming(Async) programming.
+
+  "Promise".
+
+
+Promise is design pattern which hides complexity of callback patterns
+
+
+SInce Promise is design pattern, many people have implemented Promise design pattern.
+
+1.JQuery -first promise implementation
+2.many libs and frameworks
+
+2012 E6 Commit introduced Promise as Object in javascript
+
+features of Promise Object:
+
+1.Promise by deafult is Async. Which implements timer api with 0 ms .
+
+Promise can be used with any async implementations.
+
+Promise Implemenation:
+
+1. Create Promise Object from Promise contructor
+2. Create PRomise object from factory apis 
+
+Promise object methods:
+1.then - success
+2.catch - errors
+3.finally - clean up
+4.resolve
+5.reject
+6.all
+
+//promise design pattern using ES 6 Promise Object.
+
+//Promise is by default async: you need not use timer.
+
+function getPromise() {
+    //Promise witout constructor
+    return Promise.resolve('done'); // Promise Object
+    // return Promise.reject('something went wrong')
+}
+
+// let result = getPromise();
+// result.then(res => console.log(res));
+// result.catch(err => console.log(err));
+// result.finally(() => console.log('finally'))
+
+//code refactoring using builder /command chain pattern.
+
+console.log('start')
+getPromise()
+    .then(res => console.log(res))
+    .catch(err => console.log(err))
+    .finally(() => console.log('finally'));
+console.log('end')
+
+
+//Complex Callback pattens using promise
+
+/**
+const getUser = () => {
+    let fakeUser = {
+        id: 1,
+        name: 'admin',
+        password: 'admin'
+    };
+    if (fakeUser) {
+        return Promise.resolve(fakeUser);
+    } else {
+        return Promise.reject({
+            err: 'No User found'
+        });
+    }
+};
+**/
+const getUser = () => {
+    return new Promise((resolve, reject) => {
+        let fakeUser = {
+            id: 1,
+            name: 'admin',
+            password: 'admin'
+        };
+        if (fakeUser) {
+            setTimeout(() => {
+                resolve(fakeUser)
+            }, 2000);
+        } else {
+            setTimeout(() => {
+                reject({
+                    err: 'User not Available'
+                })
+            }, 2000);
+        }
+    });
+};
+
+const login = user => {
+    return new Promise((resolve, reject) => {
+        if (user.name === 'admin') {
+            setTimeout(() => resolve({
+                loginsuccess: 'valid User'
+            }), 1000);
+        } else {
+            setTimeout(() => reject({
+                err: 'Invaild User',
+                code: 400,
+            }), 1000);
+        }
+    });
+}
+
+// getUser()
+//     .then(user => console.log(user))
+//     .catch(err => console.log(err))
+//     .finally(() => console.log('finally'))
+
+getUser()
+    .then(user => login(user))
+    .then(() => console.log('login Success'))
+    .catch(err => {
+        console.log(err)
+    })
+    .finally(() => console.log('async operation is done'))
+
+console.log('going on')
 
 
 
@@ -1385,3 +1889,8 @@ scope chain
 
 
 
+
+
+
+
+ 

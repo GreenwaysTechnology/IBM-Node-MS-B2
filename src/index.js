@@ -1,57 +1,68 @@
+//Complex Callback pattens using promise
 
-
-//using functions
-/**function Product(pid = 'P001', name = 'Iphone') {
-    this.pid = pid;
-    this.name = name;
-}
-function Order(orderId = 'A001', product = new Product()) {
-    this.orderId = orderId;
-    //HAS-A
-    this.product = product;
-}**/
-//using classes
-class Product {
-    constructor(pid = 'P001', name = 'Iphone') {
-        this.pid = pid;
-        this.name = name;
+/**
+const getUser = () => {
+    let fakeUser = {
+        id: 1,
+        name: 'admin',
+        password: 'admin'
+    };
+    if (fakeUser) {
+        return Promise.resolve(fakeUser);
+    } else {
+        return Promise.reject({
+            err: 'No User found'
+        });
     }
-}
-class Order {
-    constructor(orderId = 'A001', product = new Product()) {
-        this.orderId = orderId;
-        //HAS-A
-        this.product = product;
-    }
-}
-//create object with dependencies
-
-let product = new Product();
-let order = null;
-
-order = new Order();
-console.log(`OrderId ${order.orderId} ${order.product.pid} ${order.product.name}`)
-
-order = new Order('B002', product);
-console.log(`OrderId ${order.orderId} ${order.product.pid} ${order.product.name}`)
-
-order = new Order('B002', new Product('P8880', 'Lenvo Think Pad'));
-console.log(`OrderId ${order.orderId} ${order.product.pid} ${order.product.name}`)
-
-
-
-
-//has-a with literal objects: nested object
-
-let locationInfo = {
-    country: {
-        countryName: 'INdia',
-        state: {
-            stname: 'Tamil Name',
-            district: {
-                name: 'Coimbatore'
-            }
+};
+**/
+const getUser = () => {
+    return new Promise((resolve, reject) => {
+        let fakeUser = {
+            id: 1,
+            name: 'admin',
+            password: 'admin'
+        };
+        if (fakeUser) {
+            setTimeout(() => {
+                resolve(fakeUser)
+            }, 2000);
+        } else {
+            setTimeout(() => {
+                reject({
+                    err: 'User not Available'
+                })
+            }, 2000);
         }
-    }
+    });
+};
+
+const login = user => {
+    return new Promise((resolve, reject) => {
+        if (user.name === 'admin') {
+            setTimeout(() => resolve({
+                loginsuccess: 'valid User'
+            }), 1000);
+        } else {
+            setTimeout(() => reject({
+                err: 'Invaild User',
+                code: 400,
+            }), 1000);
+        }
+    });
 }
-console.log(locationInfo.country.state.district.name)
+
+// getUser()
+//     .then(user => console.log(user))
+//     .catch(err => console.log(err))
+//     .finally(() => console.log('finally'))
+
+getUser()
+    .then(user => login(user))
+    .then(() => console.log('login Success'))
+    .catch(err => {
+        console.log(err)
+    })
+    .finally(() => console.log('async operation is done'))
+
+console.log('going on')
