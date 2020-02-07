@@ -2472,5 +2472,2979 @@ console.log('start');
 const data = fs.readFileSync(filePath, config);
 console.log(data);
 console.log('end')
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+Node Globals:
+
+
+Global Objects:
+...............
+1.process
+2.JS objects-math,date....
+3.exports
+4.module
+
+
+Global Variables:
+
+5.__dirname
+      ->Get current dir path
+6.Global Objects in node:
+
+1.process
+2.JS objects-math,date....
+3.exports
+4.module
+
+Glbal variables
+
+5.__dirname
+      ->Get current dir path
+6.__filename
+     ->Get current dir + path__filename
+     ->Get current dir + path
+
+
+
+Use Case:
+  current dir + fileName
+	dir/src + fileName
+
+const fileName = __dirname + 'info.txt'; //'./src/info.txt';
+
+Here this program will not append real path name.
+
+How to deal with file paths?
+
+ node provides a module called "path"
+
+
+const fs = require('fs');
+const path = require('path');
+
+//const fileName = __dirname + 'info.txt'; //'./src/info.txt';
+
+const fileName = path.join(__dirname, 'info.txt')
+
+const config = {
+    encoding: 'UTF-8'
+};
+
+fs.readFile(fileName, config, function (err, data) {
+    //handle error
+    if (err) throw err;
+    console.log(data);
+});
+
+
+IO operations can be done sync or async way.
+
+Async io operations can be done two ways.
+
+1.Non-Streaming
+2.Streaming  : Evented IO : Event driven IO.
+
+
+Non Streaming IO : read / write vs Streaming:
+............................................
+
+Non Streaming IO:
+ 
+ The node first read file from disk
+ It starts loading the entire file into node process memory first
+ After loading the entire file , then starts delivering to Clients.
+
+Note:
+   DONT USE NON-STREAMING IO PATTERN IN NETWORKING APPLICATIONS.
+
+How to implement non-streaming apis
+
+ fs.readFile
+ fs.writeFile
+
+Streaming:
+ 
+Packet:
+   In networks the data is broken into smaller and smaller unit, which is called packet.
+  each packet is sent sequentially to the client.
+
+Node js uses the packet like technique to send data , that is process we call "Chunk".
+
+Chunk is called a unit of data.
+
+Streaming apis are powered with events :evented
+
+Events are emitted by os, our program is listener.
+
+Types of Streams:
+
+1.Readable Stream : input
+2.Writeable stream : output
+3.Duplex stream : read + output
+
+
+Built in readable Streams:
+
+HTTP responses, on the client
+HTTP requests, on the server
+fs read streams
+zlib streams
+crypto streams
+TCP sockets
+child process stdout and stderr
+process.stdin
+
+Writable Streams:
+
+HTTP requests, on the client
+HTTP responses, on the server
+fs write streams
+zlib streams
+crypto streams
+TCP sockets
+child process stdin
+process.stdout, process.stderr
+
+
+common events in all io
+
+data event:
+ which is emitted by node, for each chunk.
+
+close event:
+The 'close' event is emitted when the stream and any of its underlying resources (a file descriptor, for example) have been closed.
+
+end event:
+The 'end' event is emitted when there is no more data to be consumed from the stream.
+
+Event: 'error'
+ The 'error' event may be emitted by a Readable implementation at any time
+Typically, this may occur if the underlying stream is unable to generate data due to an underlying internal failure, or when a stream implementation attempts to push an invalid chunk of data.
+
+
+const fs = require('fs');
+const path = require('path');
+
+const fileName = path.join(__dirname, 'info.txt')
+
+const config = {
+    encoding: 'UTF-8'
+};
+
+//Readable stream
+const stream = fs.createReadStream(fileName, config)
+
+//Bind events
+let data = '';
+stream.on('data', function (chunk) {
+    console.log(`Received ${chunk.length} bytes of data.`);
+    data += chunk;
+});
+
+stream.on('error', function (err) {
+    console.log(err);
+});
+stream.on('end', function () {
+    console.log('end')
+    console.log('Data is ready');
+    console.log(data);
+});
+stream.on('close', function () {
+    console.log('close ')
+});
+
+Stream write Operation:
+const fs = require('fs');
+const path = require('path');
+
+const fileName = path.join(__dirname, 'grains.txt');
+
+const config = {
+    encoding: 'utf8',
+    flag: 'w'
+};
+const grains = ['wheat', 'rice', 'oats'];
+
+const outputStream = fs.createWriteStream(fileName, config);
+
+while (grains.length) {
+    let data = grains.pop() + " ";
+    outputStream.write(data);
+    console.log("Wrote: %s", data);
+}
+outputStream.close();
+
+outputStream.on('close', function () {
+    console.log('file write operation is completed')
+});
+outputStream.on('open', function () {
+    console.log('file is opened for write')
+});
+
+outputStream.on('ready', function () {
+    console.log('file write operation is ready!')
+});
+///////////////////////////////////////////////////////////////////////////////////
+Back Pressure:
+.............
+
+If you want to read data from one file and write into anthoer file.
+If you want to read data from network sockets and write into anthoer file /another socket.
+
+Read + Write => togther
+Eg:
+ copy and paste
+ file moving 
+ file copies
+
+//read + write 
+const fs = require('fs');
+const path = require('path');
+
+const fileName = path.join(__dirname, 'info.txt');
+
+const config = {
+      encoding: 'UTF-8'
+}
+
+const outputFileName = path.join(__dirname, 'greeter.txt');
+
+
+const inputStream = fs.createReadStream(fileName, config);
+
+const outputStream = fs.createWriteStream(outputFileName, config);
+
+//Register data event.
+inputStream.on('data', function (chunk) {
+      console.log(`Received ${chunk.length} bytes of data.`);
+      console.log(chunk);
+      outputStream.write(chunk);
+});
+
+
+//end event
+inputStream.on('end', function () {
+      console.log('There will be no more data to read!');
+      outputStream.close();
+})
+
+//error event: for error handling
+inputStream.on('error', function (err) {
+      console.log(`Some thing went wrong! ${err}`)
+});
+
+outputStream.on('close', function () {
+      console.log(`File write operation is completed`);
+});
+
+Problems when you do read and write together
+
+1. In general read operation is faster than write operation
+
+Back Pressure means inputstream is fast, outputstream slow, then data will be
+lost.
+
+Handling back pressure:
+.......................
+"Pause" Input stream if the Node Process memory is full(Buffer),
+resume if buffer/process memory is empty.
+
+
+Apis for handling back pressure:
+
+stream.pause() if stream is full
+else
+stream.resume() if stream is drain
+
+
+const fs = require('fs');
+const path = require('path');
+
+const inputfileName = path.join(__dirname, 'big.file');
+const outputfileName = path.join(__dirname, 'big_copy.file');
+
+const config = {
+    encoding: 'UTF-8'
+}
+
+//Back pressure handling
+const readerStream = fs.createReadStream(inputfileName, config);
+const writeStr = fs.createWriteStream(outputfileName, config);
+
+readerStream.on('data', function (chunk) {
+    console.log(`Received ${chunk.length} bytes of data.`);
+    let buffer_good = writeStr.write(chunk);
+    if (!buffer_good) readerStream.pause();
+});
+
+writeStr.on('drain', function () {
+    console.log('buffer drained!');
+    readerStream.resume();
+});
+
+readerStream.on('end', function () {
+    //console.log(data);
+});
+
+readerStream.on('error', function (err) {
+    console.log(err.stack);
+});
+
+///////////////////////////////////////////////////////////////////////////////////
+
+Back Pressure can be simplified using one simple api : pipe
+
+pipe : enabled with backpressure
+
+syntax:
+ 
+readstream.pipe(writestream)
+
+const fs = require('fs');
+const path = require('path');
+
+const inputfileName = path.join(__dirname, 'big.file');
+const outputfileName = path.join(__dirname, 'big_copy.file');
+
+const config = {
+      encoding: 'UTF-8'
+}
+
+//Back pressure handling
+const readerStream = fs.createReadStream(inputfileName, config);
+const writeStr = fs.createWriteStream(outputfileName, config);
+
+//backPressure streams
+//pipe method is simplest method which wraps resume,pasuse,drain 
+readerStream.pipe(writeStr);
+////////////////////////////////////////////////////////////////////////////////////////////
+
+Network IO :
+
+Web Programming: HTTP extension:
+
+Tradtional web work flow
+
+Client-----request----------------WebServer--- thread--will do io operation.
+Client-----request----------------WebServer----thread--will do io  operation.
+Client-----request----------------WebServer----thread-- will do io operation.
+Client-----request----------------WebServer----thread-- will do io operation.
+
+
+Non Blocking web model(Node.js):
+...............................
+
+Client-----request------WebServer built by node---|-            will io operation.
+Client-----request------WebServer built by node---|- libvu --os will io operation.
+Client-----request----- WebServer built by node---|-            will io operation.
+Client-----request----- WebServer built by node---|-            will io opeeration
+
+
+What is http? 
+
+Protocal : The rules 
+ for what?
+     Data transmission from one memory another memory address.
+
+Network layer:
+
+TCP/IP
+
+1989 : Tim berners who created  protocal called "HTTP" 
+
+http was created for transfering web documents from one machine machine.
+
+http is channel, duplex channel for transfering data via internet.
+
+
+How is http is represented? How channel is represented in machine?
+
+How http has been created? How any protocal has been created?
+
+ Any protocal including http.
+
+It is program, c program.
+
+http itself is c program.
+
+Program collection of variables and methods
+
+
+HTTP is collections of variables and methods.
+
+variables are called as Headers
+methods are called as HTTP Verbs : GET,POST,DELETE,PUT,TRACE,DEBUG..........
+
+HTTP is duplex stream : input and output.
+
+input is called as "request" from the client Persptive : read
+output is called as "response" from the server persptive. :write.
+
+HTTP and applications:
+
+Every pl, provides high level api to access low level http layer.
+
+PL            java/c#/javascript(node/ajax)
+|                   |
+HTTP Layer        http
+
+
+..............................................................................
+
+node and http 
+node provides http high level api from 'http.js' through module.
+
+Web development cycle:
+
+create web server
+create web app
+start the webserver
+
+class:http:ServerResponse : output
+class:http:ClientRequest : input
+class:http:Server : handling low socket operations
+
+Points:
+
+1.In node, we dont need any third party web server to host web application like tomcat
+  Using code itself we can create server
+
+
+const http = require('http');
+
+//env means enviroment, which is global variable
+// process is object ,
+//process.env , add new variable if not present, if present update 
+
+const port = process.env.port || 8081;
+
+//Create Server 
+//here request is just variable, holding reference of ClientRequest Object, which is created by node
+//here response is just variable, holding reference of ServerResponse object, which itself created by node
+const handler = (request, response) => {
+
+    response.write('Hello HTTP', function () {
+        console.log('Http write operation is completed')
+    });
+    response.end();//close the connection
+
+    response.on('finish', function () {
+        console.log('Client Request has been finished')
+    });
+    response.on('close', function () {
+        console.log('Client Request has been closed')
+    });
+
+}
+const server = http.createServer(handler);
+
+//server events
+server.on('request', function (req, res) {
+    console.log(`The Request is received`)
+});
+
+//Start the webserver
+server.listen(port, function () {
+    console.log(`Server is ready to accept incomming Request at ${port} `);
+});
+
+
+const { createServer } = require('http');
+
+//env means enviroment, which is global variable
+// process is object ,
+//process.env , add new variable if not present, if present update 
+
+const port = process.env.port || 8081;
+
+//Create Server 
+const server = createServer((request, response) => {
+    response.write('Hello HTTP', () => {
+        console.log('Http write operation is completed')
+    });
+    response.end();//close the connection
+    response.on('finish', () => {
+        console.log('Client Request has been finished')
+    });
+    response.on('close', () => {
+        console.log('Client Request has been closed')
+    });
+
+});
+
+//server events
+server.on('request', (req, res) => {
+    console.log(`The Request is received`)
+});
+
+//Start the webserver
+server.listen(port, () => {
+    console.log(`Server is ready to accept incomming Request at ${port} `);
+});
+
+////////////////////////////////////////////////////////////////////////////////////////////
+
+Use case 2 : how to send json data.
+
+
+What is json?
+
+ JSON is data interchange format.
+ JSON is data format for transmitting data across app/machines etc.
+
+
+In 2000, There was conference held , Data interchange conference
+
+to know the industry standard data interchange patterns,
+in the confernce many formats proposed nearly 30+
+
+1.xml,2.JSON
+
+2005 JSON Started becomming popular to transmit data over network among different applications 
+
+JSON is text file, simple ascii file
+JSON invented by crock ford who is js arch
+JSON is inspired from javascript literal object.
+JSON Stores data in key-value pair
+JSON is platform and language independant
+JSON stores only number,string,boolean, object,array data .
+
+most of languages provide JSON PARSERS.
+ PARASERS : 
+   CONVERT STRING TO OBJECT AND OBJECT TO STRING.
+
+ES 5 VERSION ADDED PARSER OBJECT in the language
+ 
+JSON.stringify : Object to string
+JSON.parse : String to Object
+
+////////////////////////////////////////////////////////////////////////////////////////////
+
+Javascript and Data Structure:
+..............................
+
+
+Array: is common data structure in javascript , most powerfull ds.
+
+Features:
+1.Array is object,instance of Array class
+2.Array is dynamic like arraylist
+3.Array can hold any data.
+4.Array is 0th index based
+5.Array provides lot of in built iterator api
+  -foreach,filter,map,reduce,find.....
+
+
+
+
+//array declarations
+
+//simple values
+
+const numList = [1, 2, 3, 4, 5, 6];
+
+//iterate
+//for...loop
+for (let i = 0; i < numList.length; i++) {
+    console.log(numList[i]);
+}
+//iterator
+numList.forEach((i, index) => console.log(i));
+
+//List of Customers
+const customers = [
+    { id: 1, name: 'a1' },
+    { id: 2, name: 'a2' },
+    { id: 3, name: 'a3' },
+    { id: 4, name: 'a4' },
+    { id: 5, name: 'a5' },
+    { id: 6, name: 'a6' },
+];
+customers.forEach((customer, index) => console.log(`${customer.id} ${customer.name} `));
+
+//JSON PARSING
+const customerStr= JSON.stringify(customers);
+console.log(customerStr)
+console.log(JSON.parse(customerStr));
+
+ 
+
+Types of responses:
+
+html
+data : JSON.
+
+content type: the server will send data to client in different formats that is called content type
+default format is "text/plain".
+
+which is part of "content-type" header
+
+"content-type" : "text/plain".
+
+content-type" : "application/json".
+
+
+src/mock-data/customers.js
+
+const CUSTOMERS = [
+    { id: 1, name: 'a1' },
+    { id: 2, name: 'a2' },
+    { id: 3, name: 'a3' },
+    { id: 4, name: 'a4' },
+    { id: 5, name: 'a5' },
+    { id: 6, name: 'a6' },
+];
+
+module.exports = CUSTOMERS;
+
+src/index.js
+
+const { createServer } = require('http');
+const CUSTOMERS =  require('./mock-data/customers');
+
+//env means enviroment, which is global variable
+// process is object ,
+//process.env.port , add new variable if not present, if present update 
+
+const port = process.env.port || 8081;
+
+//Create Server 
+const server = createServer((request, response) => {
+
+    //setting response headers
+    response.setHeader('Content-Type', 'application/json');     
+
+    response.write(JSON.stringify(CUSTOMERS), () => {
+        console.log('Http write operation is completed')
+    });
+    response.end();//close the connection
+    response.on('finish', () => {
+        console.log('Client Request has been finished')
+    });
+    response.on('close', () => {
+        console.log('Client Request has been closed')
+    });
+
+});
+
+//server events
+server.on('request', (req, res) => {
+    console.log(`The Request is received`)
+});
+
+//Start the webserver
+server.listen(port, () => {
+    console.log(`Server is ready to accept incomming Request at ${port} `);
+});
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+Use case 3 ; How to send data from client to server?
+ Request information
+
+
+
+const { createServer } = require('http');
+
+const port = process.env.port || 8081;
+
+const requestHandler = (request, response) => {
+    //setting response headers
+    response.setHeader('Content-Type', 'application/json');
+    //request and response processing
+    let data = ''
+    request.on('data', function (chunk) {
+        data += chunk;
+    });
+    request.on('end', function () {
+        console.log(data);
+        response.write(JSON.stringify({
+            message: 'Data has been submitted'
+        }));
+        response.end() //close  stream
+    });
+};
+const server = createServer(requestHandler);
+
+
+//start the server
+server.listen(port, () => {
+    console.log(`Server is Up at ${port}! `);
+});
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+node modules: types of modules
+
+1.custom module
+2.in built modules - fs,http,path,os.....
+3.third party module.
+
+IS it possible to build real time web apps by using just pure http module alone?
+
+ Yes! but it is very complex
+
+NPM : node package manager
+
+node package manager === mvn
+npm is tool is used to distribute node modules to others
+and you can get node modules from other others.
+
+npm tool is distributed along with node installation
+
+npm uses public repository server called npmjs.com npmjs.org
+
+tools and libs,frameworks all are distributed as node modules into repository.
+
+/////////////////////////////****************////////////////////////////////////////////
+
+Javascript Project Structure:(server side/ client side)
+.........................................................
+
+The project must have two things
+
+1.package.json file :
+   meta file which describes the project information
+2.node_modules folder
+   which contains libs/frameworks/tools code.
+
+
+create package.json file
+
+>npm init
+
+package.json
+{
+  "name": "mynode-apps",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Subramanian Murugan",
+  "license": "ISC"
+}
+
+
+
+npm is used
+
+to install,uninstall,publish node modules from node repo / into node repo.
+
+if you install third party modules , into your project, node distributes npm tool ,using this you can install,uninstall,upgrade node modules.
+
+
+
+npm syntax:
+
+npm commandName.
+
+
+node_modules : folder which can hold all javascript modules downloaded from repo.
+
+
+installing module:
+
+>npm install  moduleName  --options
+>npm i moduleName --options
+
+options:
+ --save
+ --save-dev
+ -g
+
+Software env:
+
+
+1.Development
+
+2.Production
+
+
+if you are installing any node module, you can tell, do you want to use only for development
+or development + production.
+
+
+Unit testing libs : Junit.jar===>
+
+ --save = >    development + production
+ --save-dev => only for development
+
+////
+install module : dev + production:
+
+npm i --save lodash
+
+  "dependencies": {
+    "lodash": "^4.17.15"
+  }
+
+
+const lodash = require('lodash')
+
+let array = [1];
+
+let other = lodash.concat(array, 2, [3], [
+      [4]
+]);
+console.log(other);
+
+Dev Dependencies:
+
+>npm i chai --save-dev
+
+"devDependencies": {
+    "chai": "^4.2.0"
+  }
+
+
+
+npm uninstalling:
+................
+>npm uninstall jquery --save
+
+........................****************....................................................
+
+-g : global dependencies:
+..........................
+global package : package will be installed globally 
+ inside c drive.
+ looks like exe/bat files in windows
+
+global packages not used for development(coding)
+
+tools
+ ->build system :webpack
+ ->servers - webservers,testing servers
+ ->compilers : babel,tsc....
+
+Demo: 
+
+1.tool called mocha  :  it is testing server
+
+>npm i mocha -g
+
+C:\Users\sasub\AppData\Roaming\npm\node_modules\mocha\bin\_mocha
+
+Global Modules and its Problems:
+...............................
+
+g vs --save-dev:
+
+
+global dependencies not good for multiple sharing projects
+
+install tools as project specific. --save-dev
+
+
+javascript automation:
+	 single command trigger workflows
+
+section is used for  automation:
+
+"scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+
+"scripts": {
+    "commandName": "task to be automated"
+}
+commandname can be provided by npm called built in commands
+
+
+eg:
+start
+test
+postinstall
+preinstall
+
+custom commands also possible.
+
+How to enable automation?
+
+ >npm start
+ >npm test
+
+
+
+"subu" : "node src/server.js"
+
+For running:
+>npm test | start  : in built commands
+>npm run subu | npm run customCommand.
+
+"scripts": {
+    "test": "mocha",
+    "subu": "node src/server.js",
+    "start": "node src/server.js",
+    "build": "webpack"
+  }
+
+////////////////////////////////////////////////////////////////////////////////////////////
+
+
+ES 6 Modules:
+............
+
+ next module system after commonjs(exports,module.exports,require)
+
+ES 6 moudles are javascript committe modules
+
+export = exports =>code will be packed inside object
+export default = module.exports =  code will be returned as it is
+import == require()
+
+Note: Node does not support es 6 modules, only cjs
+
+
+How to run the es 6 module on node?
+
+webpack : web pack is npm module, / tool is used to bundle js apps  which are portable on browser/node , without worrying about module patterns.
+
+>npm i webpack webpack-cli  --save-dev
+
+
+webpack.config.js
+const path = require('path');
+
+module.exports = {
+      entry: './src/index.js',
+      output: {
+            path: path.resolve(__dirname, 'dist'),
+            filename: 'bundle.js'
+      }
+};
+
+  "scripts": {
+    "test": "mocha",
+    "subu": "node src/index.js",
+    "build": "webpack"
+  }
+
+>npm run build
+
+
+Webpack is awesome tool for distributing application to production
+************************.................*****************************************************
+
+Distributed Application development:
+
+1.WebServices REST End points
+
+2.Microservice Architectures
+
+
+
+Web applications on node:
+
+Problems with http core module.
+
+1.complex apps you cant write
+2.no design patterns
+3.url mappings,method mappings
+
+
+Frameworks:
+
+ 1.express.js : it is web framework written by node core team
+
+
+
+Express is Node framework built on the top of node http module.
+
+
+You can create two types of application
+
+1.RESTFull web services
+2.Dynamic web application 
+
+
+HOW To implement REST Architecutre?
+
+Every pl today provides implementation for build rest full architecutres.
+
+eg:
+java
+->JXRS
+ Spring Rest
+
+c#
+ web api
+
+javascript 
+  - node ->express,loopback....
+
+...........................................................................................
+
+Express app:
+
+
+Setup:
+
+>mkdir myexpress-app
+>cd myexpress-app
+>code .
+>npm init
+
+>npm i  express --save
+
+
+
+Express and REST architecture:
+..............................
+
+Express core concepts:
+
+1.Express Application : collection of many objects
+2.Express Modules
+3.Express middlewares
+4.Express with third party libs.
+
+
+Use case : How to create simple REST API : get,post,delete,put...
+
+
+Steps:
+
+1.require express lib
+
+1.create application object
+
+
+Application object mehtod
+
+Application
+Properties
+
+app.locals
+app.mountpath
+
+Events
+ mount
+
+Methods
+app.all()
+app.delete()
+app.disable()
+app.disabled()
+app.enable()
+app.enabled()
+app.engine()
+app.get()
+app.get()
+app.listen()
+app.METHOD()
+app.param()
+app.path()
+app.post()
+app.put()
+app.render()
+app.route()
+app.set()
+app.use()
+
+
+
+//express is just variable , hold a function called createApplication
+const express = require('express');
+
+const port = process.env.port || 3000;
+
+//console.log(express);
+//express() function call returns an Object reference which is called Application object
+//app is just variable holding application object reference.
+const app = express();
+
+//REST End Points
+//http://localhost:3000/api/list
+//get,post,delete,put,....
+
+app.get('/api/list', function (req, res) {
+    res.end('GET method')
+});
+
+app.post('/api/list', function (req, res) {
+    res.end('POST method')
+});
+
+app.delete('/api/list', function (req, res) {
+    res.end('DELETE method')
+});
+
+app.put('/api/list', function (req, res) {
+    res.end('PUT method')
+});
+
+
+//start the server
+app.listen(port, function () {
+    console.log(`Express Server is running at ${port}`)
+});
+
+*******************///////////************************************************************
+
+Use case : build REST end points for todos and users
+
+const express = require('express');
+const TODOS = require('./mock-data/todos')
+const USERS = require('./mock-data/users')
+
+const port = process.env.port || 3000;
+//Create Application Object
+const app = express();
+
+
+//REST End Points :TODOS
+
+//http://localhost:3000/api/todos/list
+
+app.get('/api/todos/list', function (req, res) {
+    res.json(TODOS);
+})
+//http://localhost:3000/api/todos/list/:id
+//http://localhost:3000/api/todos/list/2
+
+app.get('/api/todos/list/:id', function (req, res) {
+    //read request parameter
+    const id = parseInt(req.params.id)
+    const filteredTo = TODOS.filter(todo => {
+        return todo.id === id;
+    });
+    res.json(filteredTo);
+})
+
+//REST End Points :USERS
+
+app.get('/api/users/list', function (req, res) {
+    res.json(USERS);
+})
+app.get('/api/users/list/:id', function (req, res) {
+    //read request parameter
+    const id = parseInt(req.params.id)
+    const filteredUsers = USERS.filter(user => {
+        return user.id === id;
+    });
+    res.json(filteredUsers);
+})
+//start the server
+app.listen(port, function () {
+    console.log(`Express Server is running at ${port}`)
+});
+
+
+
+The above code logic is fine , but think about modularity.
+
+There is no modular approach.
+
+In Application , we may sub domains
+  -todos
+  -users
+  -payments
+  -billing
+ 
+
+
+Express App architecture : Domain Driven Arch
+  
+ rootFolder
+    src
+     -todos
+        -todomodule.js
+            -rest endpoints
+     -users
+     -payments
+     -billing
+     -util
+     -mock-data
+     -assets
+     -configs
+    
+   index.js
+   or
+   main.js
+   app.js
+
+>node index.js
+	
+
+Modularity : 
+
+The below is not modular
+
+const express = require('express');
+const TODOS = require('./mock-data/todos');
+const USERS = require('./mock-data/users');
+
+const port = 3000;
+//Create Application Object
+const app = express();
+
+//REST End Points :TODOS
+
+//http://localhost:3000/api/todos/list
+
+app.get('/api/todos/list', function (req, res) {
+      res.json(TODOS);
+})
+//http://localhost:3000/api/todos/:id
+//http://localhost:3000/api/todos/2
+app.get('/api/todos/:id', function (req, res) {
+      //read Request parameter
+      const id = parseInt(req.params.id)
+      const filteredTo = TODOS.filter(todo => {
+            return todo.id === id;
+      });
+      res.json(filteredTo);
+})
+//REST END POINT : USERS
+
+//http://localhost:3000/api/users/list
+
+app.get('/api/users/list', function (req, res) {
+      res.json(USERS);
+})
+//http://localhost:3000/api/users/:id
+//http://localhost:3000/api/users/2
+app.get('/api/users/:id', function (req, res) {
+      //read Request parameter
+      const id = parseInt(req.params.id)
+      const filteredUsers = USERS.filter(user => {
+            return user.id === id;
+      });
+      res.json(filteredUsers);
+})
+
+//start server 
+app.listen(port, function () {
+      console.log(`Express Server is Ready at ${port}`);
+});
+
+Modularity : Express apps provides logical modularity , separating application into logical modules based on "domain" domain driven design.
+
+Todo module
+User module
+Post module
+Customer module
+invoice module
+
+Express provides a spcial Object called "Router" Object which helps to separate code into modular way.
+
+
+src/todos/todosModule.js
+
+//build todos rest end points
+const express = require('express');
+const TODOS = require('../mock-data/todos');
+
+//create router : submodule
+const todosModule = express.Router();
+
+//REST End Points :TODOS
+//http://localhost:3000/api/todos/list
+todosModule.get('/list', function (req, res) {
+      res.json(TODOS);
+})
+
+//http://localhost:3000/api/todos/:id
+//http://localhost:3000/api/todos/2
+todosModule.get('/:id', function (req, res) {
+      //read Request parameter
+      const id = parseInt(req.params.id)
+      const filteredTo = TODOS.filter(todo => {
+            return todo.id === id;
+      });
+      res.json(filteredTo);
+})
+
+module.exports = todosModule;
+
+//build todos rest end points
+const express = require('express');
+const USERS = require('../mock-data/users');
+
+//create router : submodule
+const usersModule = express.Router();
+
+
+
+
+src/todos/usersModule.js
+//REST END POINT : USERS
+
+//http://localhost:3000/api/users/list
+
+usersModule.get('/list', function (req, res) {
+      res.json(USERS);
+})
+//http://localhost:3000/api/users/:id
+//http://localhost:3000/api/users/2
+usersModule.get('/:id', function (req, res) {
+      //read Request parameter
+      const id = parseInt(req.params.id)
+      const filteredUsers = USERS.filter(user => {
+            return user.id === id;
+      });
+      res.json(filteredUsers);
+})
+
+module.exports = usersModule;
+
+
+src/app.js
+const express = require('express');
+const todosModule = require('./todos/todosmodule');
+const usersModule = require('./users/usersmodule');
+
+const port = 3000;
+//Create Application Object
+const app = express();
+//Request will be passed to app
+//configure submodules with app
+app.use('/api/todos', todosModule);
+app.use('/api/users', usersModule);
+
+
+//start server 
+app.listen(port, function () {
+      console.log(`Express Server is Ready at ${port}`);
+});
+//////////////////////////////////////////////////////////////////////////////////////////
+
+sending data to Express app!
+............................
+
+todosModule.post('/', function (req, res) {
+    let todo = ''
+    req.on('data', function (chunk) {
+        todo += chunk;
+    });
+    req.on('end', function (chunk) {
+        //biz logic
+        TODOS.push(JSON.parse(todo))
+        res.json(TODOS)
+    });
+
+});
+
+From post man
+
+    {
+        "userId": 33,
+        "id": 201,
+        "title": "ipsam aperiam voluptates qui",
+        "completed": false
+    }
+
+The above code for reading data is complex , express provides simple soultion called 
+
+
+In express , you need not attach events to read data.
+
+req.body
+
+Express app architecture:
+
+express has two things
+1.URL mapping and request processing : app.get('url')
+2.Routers , to create moduels
+
+
+middlewares:
+...........
+
+what is middleware?
+
+ it is utility can be plugged in express application.
+
+Express provides only
+1.request and response processing.
+2.Routers :in to modules.
+
+application needs:
+
+1.loggers
+2.security
+3.database connectivity
+3.data formating
+4.view engine integration
+etc.....
+
+Types of middlewares
+1.custom middlewares
+2.third party middlewares
+
+
+middleware workflows:
+
+client----request---node--server---express application---
+
+			   | ---m1
+			   | --m2
+	express application| ---m3   ----Request Processing(get,post...)
+			   |---m4
+			   | --mn
+
+
+
+
+How to attach middleware with application object?
+
+app.use(middleware) : middleware registeration at app level : global middlewares
+router.use(middleware) : middleware registeration at module level
+
+
+Types of middlewares based on Use:
+.................................
+Application-level middleware
+  middleware attached at application : global middlewares
+Router-level middleware
+ middleware attached at router level(module) : module specific
+Error-handling middleware
+ for handling global errors
+Built-in middleware
+ provided by express itself
+Third-party middleware
+ provided by others.
+
+Built-in middleware
+ provided by express itself
+
+1.body-parser :
+  which parses client input data into javascript object
+
+How to attach body-parser middleware at application object level?
+
+const bodyParser = require('body-parser')
+
+const port = process.env.port || 3000;
+
+const app = express();
+
+//Body-parser middleware registeration.
+// parse application/x-www-form-urlencoded
+app.use(bodyParser.urlencoded({ extended: false }))
+
+// parse application/json
+app.use(bodyParser.json())
+
+
+
+////////////////////////////////////////////////////////////////////////////
+//Global/application  Middleware configuration
+
+// parse application/json
+app.use(bodyParser.json())
+
+// parse application/x-www-form-urlencoded
+app.use(bodyParser.urlencoded({
+      extended: false
+}))
+
+
+////////////////////////////////////////////////////////////////////////////
+
+How to write custom middlewares?
+
+1.It is function only , express request processing function
+
+middleware can be written for any url pattern and any http method in the application.
+
+general middleware syntax;
+
+ app.use(function(req,res,next){});
+
+
+middleware chian :
+
+  m1--next-->m2--next--m3-next--mn---next---requestProcessing
+
+..................................................................................
+
+Requirement:
+
+ 1.I want middleware , should be executed for the whole application(collection of modules)
+    for any request (get,post,delete)
+
+
+app.use(function (req, res, next) {
+    console.log(` ${req.url}  ${req.method}  ${new Date()}`)
+    next(); // moving the middle ware to next middleware
+});
+
+ 2. I want middleware for todos module only for any type request
+
+
+const todosModule = express.Router();
+
+todosModule.use(function (req, res, next) {
+    console.log('Welcome to TODO Module')
+    next();
+})
+
+3. I want middleware for todos, for particular url pattern and method
+   
+   
+todosModule.use('/', function (req, res, next) {
+    console.log('List Api')
+    next();
+})
+
+..................................................................................
+
+Express middlewares  are project or lib specific.
+
+Eg:
+if i want to connect mongodb as back end.
+
+i need middleware.
+
+ Express --->mongooseMiddleware---->Mongodb
+
+Loggers
+Auth : oauth 
+sql -oracle,mssql 
+
+//build todos rest end points
+const express = require('express');
+const TODOS = require('../mock-data/todos');
+
+//create router : submodule
+const todosModule = express.Router();
+
+//middleware is called for any url,any method in the TODOS Module
+todosModule.use(function (req, req, next) {
+      console.info('TODOS API started')
+      next();
+})
+todosModule.use('/list', function (req, res, next) {
+      console.info(`TODOS  API : ${req.method} `)
+      next();
+})
+
+//REST End Points :TODOS
+//http://localhost:3000/api/todos/list
+todosModule.get('/list', function (req, res) {
+      res.json(TODOS);
+})
+
+//http://localhost:3000/api/todos/:id
+//http://localhost:3000/api/todos/2
+todosModule.get('/:id', function (req, res) {
+      //read Request parameter
+      const id = parseInt(req.params.id)
+      const filteredTo = TODOS.filter(todo => {
+            return todo.id === id;
+      });
+      res.json(filteredTo);
+})
+todosModule.post('/', function (req, res) {
+      let todo = req.body;
+      console.log(todo);
+      res.json(TODOS.concat(todo));
+});
+
+
+module.exports = todosModule;
+..................................................................................
+
+
+const express = require('express');
+const todosModule = require('./todos/todosmodule');
+const usersModule = require('./users/usersmodule');
+const bodyParser = require('body-parser');
+
+const port = 3000;
+//Create Application Object
+const app = express();
+
+//middleware : custom
+//middleware syntax similar to request handler but it takes extra parameter
+// next
+//global middlewares , middle for any url,any method
+app.use(function (req, res, next) {
+      //middleware logic
+      console.info('IBM digital api platform started...');
+      next();
+});
+
+app.use(function (req, res, next) {
+      //middleware logic
+      console.info('This Platform is used to automate digital apis...');
+      next();
+});
+// parse application/json
+app.use(bodyParser.json())
+
+// parse application/x-www-form-urlencoded
+app.use(bodyParser.urlencoded({
+      extended: false
+}))
+
+
+//Request will be passed to app
+//configure submodules with app
+app.use('/api/todos', todosModule);
+app.use('/api/users', usersModule);
+
+
+//home page
+app.get('/', function (req, res) {
+      res.end('<h1>IBM digitial api platform </h1>');
+});
+
+
+//start server 
+app.listen(port, function () {
+      console.log(`Express Server is Ready at ${port}`);
+});
+
+app.on('request', function (req, res) {
+      console.log(`Server is listening ${req.url}`)
+});
+............................................................................................
+				Microservices : Molecular js
+                                ............................
+
+What is microservice?
+
+Microservice is collection of design patterns to build distributed 
+Applications
+
+
+Distributed Computing / Application:
+...................................
+Distributed computing is a model in which "components of a software system" are shared among multiple computers to improve efficiency and performance.
+
+Distributed computing is not a new one, it has been since 1970.
+
+Distributed computing is other wise called as "Client-Server" Computing
+
+
+"components of a software system":
+..................................
+
+Application represents a biz domain eg : Shopping,HealthCare,Travel,Accountancy,Billing
+
+Application is collection of sub domains
+  eg: Shopping
+           -Customers
+           -Products
+           -Inventory
+           -Shipping
+           -Customer Care
+           -Billing
+
+In General  The Application is developed based on single technology eg : java,.net,javascript
+php....
+
+if you take java , java is oo language, application is build based on objects , collection of
+objects.
+Application is organized based on modules(sub domains) .
+
+
+In technical classification:
+
+Web
+
+Client------------------ App Server -------Database Server 
+					   Directory server
+					   MQ 
+					   EMAIL Servers
+
+MVC					
+
+View ----------------Controller ------Service-----DATA ------ data sources.
+............................................................................................
+
+Traditional Enterprise distributed application development,deployment:
+   Monolthic Architecture.
+
+Software Life cycle:
+
+1.Req
+
+2.Design
+
+3.Development 
+
+4.Testing
+
+5.Production
+
+
+Agile : In short period, we have build, deliver application to the customer
+        daily/weekly ..........
+
+Continous req,design,develop,testing,deploy
+
+Devops : It helps for continous req,design,dev,testing,deploy
+ 
+
+We need to break application Life cycles in dependently
+ 
+	 How to break application Life cycles in dependently?
+
+
+Based on domain : according to the book called "domain driven design"
+
+
+Note:
+  Traditional application is build , tested,deployed on single technology :
+          Java
+         "Vendor Lock in"
+   You have to bent your biz domain domain based on techology
+
+Cons:
+ 1.what if i want to add new domain which is completly not suitable for java
+
+ 
+     "DDD" Says dont build application for technology, build for biz/domain"
+				|
+			based on this book a new architecture was born
+				 |
+			  "Microservices"
+ 
+
+
+monolithic model ; JAVA
+
+                            Shopping               - JAR/WAR/EAR
+				|
+		--------------------------------
+		|       |            |         |
+		|       |            |         | 
+	     Cart     Inventory    Products  Review   - Spring MVC
+              |         |             |        |
+	    ORACLE     oracle       Oracle    Oracle
+	
+
+
+Microservices:
+
+
+1.DDD  : based on domain you can select technology, setup team
+2. loosly coupled : sub domains are going to become separate domain,which is     designed,developed ,tested independenly.
+3.Eachdomain will have its own team.
+
+4.integration of domains are easy with help of integration technologies
+   like , messaging.
+5.Automation is key concepts : which enables "Continous"
+   "Continouse Req" : BDD ---->Cucumber 
+   "Continouse Design" BDD -Cucumber
+   "Continouse developement" - any technology
+   "Contiouse testing" -
+   "Continouse deployement" - Clouds,Containers(Docker)....
+
+
+                        "Microservice is Polyglot"
+
+	    Cart Team 
+	    (Dev ops)
+		|
+	    Developers
+		|
+	    Testers
+		|
+	    Operational
+                           
+	      -----   ------    --------   -----------
+		|       |            |         |
+		|       |            |         | 
+       	    ---------------------------------------	     
+     Communication Channel : Enterprise Bus : they exchange data
+	    ---------------------------------------
+             Cart     Inventory    Products  Review  
+          (nodejs)     java          Python    Ruby
+              |         |             |        |
+	    REDIS     oracle       Oracle    mongodb
+	     --------------------------------------	
+		         Clouds
+			   |                 Deployment
+			containers
+	   ----------------------------------------	
+	
+
+Features:
+
+Highly maintainable and testable
+Loosely coupled
+Independently deployable
+Organized around business capabilities
+Owned by a small team
+
+...........................................................................................
+                      Micro +   Service
+                       |          |
+                Breaking App   App : code : program
+		   At
+                Micro Level
+  
+How to write better microservice program?/IS there is any design Principle/design pattern to write better Microservice code?
+
+    "SOLID" Principles
+
+Microservice is just architecture / Collection of patterns to build,test,deliver distributed 
+application.
+
+if i want to start microservice based architecture how do i begin?
+
+"Today Every Programming language Vendors /third parties Provide an infrastructure(frameworks) to build microservice based application"
+
+Languages and its frameworks:
+
+1.java
+   "Spring Cloud"
+   "Eclipse MicroProfile"
+   " Micronaut"
+   "Eclipse Vertx"
+
+2.javascript
+    "Moleculer"
+     "Seneca"
+    "Eclipse Vertx"
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+We going to discuss Node.js(javacript language) based microservice framework:
+
+->Moleculer
+
+What is moleculer?
+
+ moleculer is a node js microservice framework, built on top express.js , coimbing many middlewares.
+
+
+Why moleculer / Moleculer features:
+
+
+1.Promise-based solution (async/await compatible)
+
+2.request-reply concept
+
+3.support streams
+
+4.support event-driven architecture with load balancing
+
+5.built-in service registry & dynamic service discovery
+
+6.load balanced requests & events (round-robin, random, cpu-usage, latency)
+
+7.many fault tolerance features (Circuit Breaker, Bulkhead, Retry, Timeout, Fallback)
+
+8.supports middlewares
+
+9.supports versioned services
+
+10.service mixins
+
+11.built-in caching solution (memory, Redis)
+
+12.pluggable transporters (TCP, NATS, MQTT, Redis, NATS Streaming, Kafka)
+
+
+13.pluggable serializers (JSON, Avro, MsgPack, Protocol Buffers, Thrift)
+
+
+14.pluggable validator
+
+15.multiple services on a node/server
+
+16.all nodes are equal, no master/leader node
+
+17.parameter validation with fastest-validator
+
+18.built-in health monitoring & metrics
+
+19.official API gateway module and many other modules…
+
+//////////////////////////////////////////////////////////////////////////////////////////
+Project setup
+
+1.create folders add moleculer dependencies
+
+>mkdir ibmnode-ms
+>cd ibmnode-ms
+>npm init
+>npm i  moleculer --save
+
+
+Moleculer Componets(Objects):
+
+Service Implementation:
+    Service is Object which expose your biz functionality.
+
+
+Components of moleculer:
+
+1.ServiceBroker === node process : instance of node runtime.
+
+   It is heart of Moleculer framework,Which represents an Node /Process
+
+2.Service
+  Serivice represents object which exposes biz functionality.
+
+Points : 
+  ServiceBroker contains list of services
+  Each Service represents a biz functionality
+
+eg:
+  CartService :
+    apis(biz)
+     -addToCart
+     -updateCart
+     -deleteItem
+     -searchItems
+     ...........
+
+Microservice architecture is collection of subdomains(each domain is separate application)
+............................................................................................
+
+1.Each appication is going to run on separte node process
+   NodeProcess : Service Broker
+2.Each application can exchange data via Channel
+
+
+
+Steps For creating single Node(broker),collection of services:
+
+1.create ServiceBroker Object.
+2.Create Service
+3.Start ServiceBroker
+4.You can invoke Service.
+ 
+
+
+Service Schema:
+  collection of service properties, service configuration.
+
+Properties:
+The schema has some main parts: 
+  name,
+  version, 
+  settings,
+  actions,
+  methods, 
+  events.
+
+
+How to invoke Service?
+
+
+There are many ways?
+
+1.while starting server broker
+
+//start broker
+broker.start()
+    // Call service
+    .then(() => broker.call("math.add", { a: 5, b: 3 }))
+    .then(res => console.log("5 + 3 =", res))
+    .catch(err => console.error(`Error occured! ${err.message}`));
+
+2.via Molecular repl
+
+
+Use Case : the First service
+
+const { ServiceBroker } = require('moleculer');
+
+//create Broker
+
+const broker = new ServiceBroker();
+
+//Exposing service
+broker.createService({
+    name:'GreeterService',
+    actions : {
+        sayHello(){
+            return 'Hello Molecular MicroService'
+        }
+    }
+});
+
+
+
+//start broker
+broker.start()
+    // Call service
+    .then(() => broker.call("GreeterService.sayHello"))
+    .then(res => console.log("Greetings ", res))
+    .catch(err => console.error(`Error occured! ${err.message}`));
+
+
+How to use repl
+
+>npm install moleculer-repl
+
+Calling Service using repl
+
+mol $ call GreeterService.sayHello
+{
+  options: {},
+  actionName: 'GreeterService.sayHello',
+  rawCommand: 'call GreeterService.sayHello'
+}
+>> Call 'GreeterService.sayHello' with params: {}
+>> Execution time:
+>> Response:
+'Hello Molecular MicroService'
+mol $      
+
+Repl properties:
+
+info
+services
+nodes
+call
+help
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+Use case : how to pass parameters, args to Service apis:
+
+
+Context Object:
+...............
+
+1.Context Object is replica of Broker Object
+
+   Broker object is used to invoke services, From outside services like from main method
+ But what if , i want to call methods from One Service to Another Service"
+      -One Service method need to talk to another service method.
+         You have to call methods from one service to service
+  "Context" object is used in this case.
+
+
+  If you want to access any parameters for services methods,
+  context object is used.
+
+Point:
+  Context Object is created during broker startup., passed as a arg
+  to the action's method.
+
+
+How to call service api with parameters?
+
+mol $ call "math.add" --a 5 --b Bob --c --no-d --e.f "hello"
+                
+Note: parameter values are string by default.
+  
+ 
+const { ServiceBroker } = require('moleculer');
+
+//create Broker
+
+const broker = new ServiceBroker();
+
+//Exposing service
+broker.createService({
+    name:'GreeterService',
+    actions : {
+        sayHello(){
+            return 'Hello Molecular MicroService'
+        },
+        //method 2
+        sayHai(ctx){
+         const {firstName,lastName} = ctx.params;
+            //return `Hello ${ctx.params.name}`;
+            return `Hai ${firstName} ${lastName}`
+        }
+    }
+});
+
+
+
+//start broker
+//way 1
+// broker.start()
+//     // Call service
+//     .then(() => broker.call("GreeterService.sayHello"))
+//     .then(res => console.log("Greetings ", res))
+//     .catch(err => console.error(`Error occured! ${err.message}`));
+
+//way 2 through repl env
+broker.start();
+//Start REPL mode.
+broker.repl()
+
+
+$call GreeterService.sayHai --firstName Subramanian --lastName Murugan
+
+////////////////////////////////************////////////////////////////////////////////////
+
+A broker can have no of services:Service Communication:
+.......................................................
+
+Service is represented by Objects
+    Service communication is nothing but Object Communication.
+
+Why Objects should communicate each other?
+  ->Message passing : data exchange among objects.
+ 
+ Program to Program Communication.
+
+Based on communication Services(Objects) Can be classified:
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+Services are commmunicated via method calls with in application(Within single Broker)
+
+  -Local Service
+
+Services are commmunicated via method calls across the  application (Across the
+service Brokers)
+
+   -Remote Services
+Remote services cant communicate directly.
+
+
+
+Use case Local Service : how to create  Local services and can communicate Each Other?
+......................................................................................
+
+
+
+const { ServiceBroker } = require('moleculer');
+
+//create Broker
+
+const broker = new ServiceBroker();
+
+//Exposing service
+broker.createService({
+    name: 'GreeterService',
+    actions: {
+        sayHello() {
+            return 'Hello Molecular MicroService'
+        },
+        //method 2
+        sayHai(ctx) {
+            const { firstName, lastName } = ctx.params;
+            //return `Hello ${ctx.params.name}`;
+            return `Hai ${firstName} ${lastName}`
+        },
+        async sayGoodBye(ctx) {
+            const { firstName, lastName } = ctx.params;
+            const message = await ctx.call('GoodbyeService.sayGoodBye', { name: firstName + lastName });
+            return message;
+        }
+    }
+});
+
+//Good Bye Service
+
+broker.createService({
+    name: 'GoodbyeService',
+    actions: {
+        sayGoodBye(ctx) {
+            const { name } = ctx.params;
+            return `GoodBye! Thank you ${name}`
+        }
+    }
+
+})
+
+broker.start();
+//Start REPL mode.
+broker.repl()
+
+Invocation:
+mol $ call GreeterService.sayGoodBye --firstName Subramanian --lastName Murugan
+
+.....................................******************....................................
+
+Remote Service Communication:
+  Broker ----Broker
+  Application --- Application
+
+
+Use case : Create two brokers, and services , try to test 
+
+calculator.js
+
+const { ServiceBroker } = require("moleculer");
+
+let broker = new ServiceBroker();
+
+broker.createService({
+    name: "CalculatorService",
+    actions: {
+        async add(ctx) {
+            let { x, y } = ctx.params
+            let result = await ctx.call('AdderService.add', { a: x, b: y });
+            return `The Add result ${result}`;
+        }
+    }
+});
+broker.start();
+//Start REPL mode.
+broker.repl()
+
+
+adderservice.js
+
+const { ServiceBroker } = require("moleculer");
+
+let broker = new ServiceBroker();
+
+broker.createService({
+    name: "AdderService",
+    actions: {
+        add(ctx) {
+            const { a, b } = ctx.params;
+            return parseInt(a) + parseInt(b);
+        }
+    }
+});
+
+broker.start();
+//Start REPL mode.
+broker.repl()
+
+
+If you test from calculator service:
+
+mol $ call CalculatorService.add --x 100 --y 200
+
+You will get the below error.
+
+
+mol $ call CalculatorService.add --x 100 --y 200
+{
+  options: { x: 100, y: 200 },
+  actionName: 'CalculatorService.add',
+  rawCommand: 'call CalculatorService.add --x 100 --y 200'
+}
+>> Call 'CalculatorService.add' with params: { x: 100, y: 200 }
+[2020-02-06T07:47:31.600Z] WARN  laptop-r2tggfdl-20468/BROKER: Service 'AdderService.add' is not registered.
+>> ERROR:
+ServiceNotFoundError: Service 'AdderService.add' is not found.
+    at ServiceBroker.findNextActionEndpoint (C:\session\ibmnode-ms\node_modules\moleculer\src\service-broker.js:849:13)
+    at ServiceBroker.call (C:\session\ibmnode-ms\node_modules\moleculer\src\service-broker.js:876:25)
+    at Context.call (C:\session\ibmnode-ms\node_modules\moleculer\src\context.js:210:23)
+    at Service.add (C:\session\ibmnode-ms\services\calcatorservice.js:11:36)
+    at tryCatcher (C:\session\ibmnode-ms\node_modules\bluebird\js\release\util.js:16:23)
+    at C:\session\ibmnode-ms\node_modules\bluebird\js\release\method.js:15:34
+    at ServiceBroker.timeoutMiddleware (C:\session\ibmnode-ms\node_modules\moleculer\src\middlewares\timeout.js:25:13)
+    at ServiceBroker.fallbackMiddleware (C:\session\ibmnode-ms\node_modules\moleculer\src\middlewares\fallback.js:15:10)
+    at ServiceBroker.errorHandlerMiddleware (C:\session\ibmnode-ms\node_modules\moleculer\src\middlewares\error-handler.js:14:10)
+    at ServiceBroker.call (C:\session\ibmnode-ms\node_modules\moleculer\src\service-broker.js:898:27)
+    at call (C:\session\ibmnode-ms\node_modules\moleculer-repl\src\commands\call.js:75:9)
+    at CommandInstance.<anonymous> (C:\session\ibmnode-ms\node_modules\moleculer-repl\src\commands\call.js:131:27)
+    at Session.session.execCommandSet (C:\session\ibmnode-ms\node_modules\@moleculer\vorpal\dist\session.js:513:20)
+    at Vorpal.vorpal._exec (C:\session\ibmnode-ms\node_modules\@moleculer\vorpal\dist\vorpal.js:1077:18)
+    at Vorpal.vorpal._execQueueItem (C:\session\ibmnode-ms\node_modules\@moleculer\vorpal\dist\vorpal.js:852:17)
+    at Vorpal.vorpal._queueHandler (C:\session\ibmnode-ms\node_modules\@moleculer\vorpal\dist\vorpal.js:835:10)
+Data:  { action: 'AdderService.add' }
+
+
+Why this error?
+
+ Because , Servicebroker cant identify the service which has been hosted on different broker.
+
+Then how to communicate?
+
+
+What is the solution?
+  Inter service communication patterns
+     "Service Registry and Discovery"
+
+Service Registry:
+  It is mini database holding service definitions
+  it is other wise called naming service.
+
+Why Registry?
+ In distributed arch, no services communicate each other directly whether is local or remote.
+ 
+Discovery : lookup 
+ In distributed arch, no services communicate each other directly whether is local or remote , but communicate with help of registry  this is called "service discovery" 
+
+Moleculer and service registery and discovery:
+...............................................
+
+1.The Moleculer framework has a built-in service discovery feature and you don’t need to use any central service discovery tool (like Zookeeper, Consul, etcd) because it is already integrated into the Moleculer protocol.
+
+2.This solution is a dynamic discovery. It means that the nodes don’t need to know all other nodes at starting. When a brand new node starts, it will send information of all local services to all other nodes so that every node can build an own local service registry. 
+
+
+How do i know that Service Registery is there in mocular?
+
+ Just look log message , when start broker.
+
+[2020-02-06T07:46:37.166Z] INFO  laptop-r2tggfdl-19528/BROKER: Moleculer v0.13.12 is starting...
+[2020-02-06T07:46:37.168Z] INFO  laptop-r2tggfdl-19528/BROKER: Node ID: laptop-r2tggfdl-19528
+[2020-02-06T07:46:37.169Z] INFO  laptop-r2tggfdl-19528/BROKER: Namespace: <not defined>
+[2020-02-06T07:46:37.169Z] INFO  laptop-r2tggfdl-19528/REGISTRY: Strategy: RoundRobinStrategy
+[2020-02-06T07:46:37.177Z] INFO  laptop-r2tggfdl-19528/BROKER: Serializer: JSONSerializer
+[2020-02-06T07:46:37.178Z] INFO  laptop-r2tggfdl-19528/BROKER: Registered 10 internal middleware(s).
+mol $ [2020-02-06T07:46:37.805Z] INFO  laptop-r2tggfdl-19528/REGISTRY: '$node' service is registered.
+[2020-02-06T07:46:37.811Z] INFO  laptop-r2tggfdl-19528/REGISTRY: 'AdderService' service is registered.
+[2020-02-06T07:46:37.813Z] INFO  laptop-r2tggfdl-19528/BROKER: ServiceBroker with 2 service(s) is started successfully.
+
+Where is service registery in moleculary?
+
+ Every ServiceBroker has built in service registry.
+
+..........................................................................................
+
+Use Case : Networking : Connecting Two Services Which are remote.
+
+Network channel:
+ 
+Molecular supports  network infra structure
+
+Transporters:
+
+1.TCP transporter
+2.NATS Transporter
+3.Redis Transporter
+4.MQTT Transporter
+5.AMQP Transporter
+6.Kafka Transporter
+7.NATS Streaming (STAN) Transporter
+8.Custom transporter
+
+Steps:
+
+1.Create Two ServiceBrokers
+2.Create Two Services with each ServiceBroker
+3.Open Two Command Prompt
+4.Start each Service
+5.Start Message Brokers -NATS / Reddis /Kafka
+
+
+Service Broker Configuration:
+............................
+
+ServiceBroker({options});
+
+2.NATS Transporter
+
+Note: if you want to use any message broker,you need to install adapter packages.
+ 
+npm install nats --save
+
+
+
+const { ServiceBroker } = require("moleculer");
+
+let broker = new ServiceBroker({
+    transporter: "nats://localhost:4222"
+});
+
+broker.createService({
+    name: "CalculatorService",
+    actions: {
+        async add(ctx) {
+            let { x, y } = ctx.params
+            let result = await ctx.call('AdderService.add', { a: x, b: y });
+            return `${result}`;
+        }
+    }
+});
+broker.start();
+//Start REPL mode.
+broker.repl()
+
+
+
+
+const { ServiceBroker } = require("moleculer");
+
+let broker = new ServiceBroker({
+    transporter: "nats://localhost:4222",
+    //nodeID : 'IBM-ADDER-SERVER'
+});
+
+broker.createService({
+    name: "AdderService",
+    actions: {
+        add(ctx) {
+            const { a, b } = ctx.params;
+            return `${parseInt(a) + parseInt(b)} is from ${broker.nodeID} `;
+        }
+    }
+});
+
+broker.start();
+//Start REPL mode.
+broker.repl()
+
+////////////////////////////////////////////////////////////////////////////////////////////
+
+Load balancing:
+
+Load balancing means , distributing load to different machines in the cluster.
+
+In distributed computing, one server may not be enough to  handle load.
+
+
+
+1.Moleculer has several built-in load balancing strategies.
+
+Built-in strategies
+ ->RoundRobin strategy
+	This strategy selects a node based on round-robin algorithm.
+   Refer:https://en.wikipedia.org/wiki/Round-robin_DNS
+ ->Random strategy
+	This strategy selects a node randomly.
+ ->CPU usage-based strategy
+	This strategy selects a node which has the lowest CPU usage. Due to the node list can 	be very long, it gets samples and selects the node with the lowest CPU usage from only 	samples instead of the whole node list.
+
+ ->Latency-based strategy
+	This strategy selects a node which has the lowest latency, measured by periodic ping commands. Notice that the strategy only ping one of nodes from a single host.
+
+
+Should i configure load balancer separtly?
+ 
+ No!.
+ Every Node has in built Registry,Each Registry has in bulit load balancer.
+
+
+Use case : How to implement Load Balancer?
+ Molecular Provides build in load balancer
+
+Steps:
+
+1.Create CalculatorService with OneNode
+2.Create AdderService with 2 nodes
+3.Run all nodes and Query Data From CalculatorService  , test  which node is responding.
+
+
+Explicit load balancing Configuration
+
+ registry: {
+        strategy: "Random",
+    }
+
+
+
+const { ServiceBroker } = require("moleculer");
+
+let broker = new ServiceBroker({
+    transporter: "nats://localhost:4222"
+});
+
+broker.createService({
+    name: "CalculatorService",
+    actions: {
+        async add(ctx) {
+            let { x, y } = ctx.params
+            let result = await ctx.call('AdderService.add', { a: x, b: y });
+            return `${result}`;
+        }
+    }
+});
+broker.start();
+//Start REPL mode.
+broker.repl()
+
+
+const { ServiceBroker } = require("moleculer");
+
+let broker = new ServiceBroker({
+    transporter: "nats://localhost:4222",
+    //nodeID : 'IBM-ADDER-SERVER',
+    registry: {
+        strategy: "Random",
+    }
+});
+
+broker.createService({
+    name: "AdderService",
+    actions: {
+        add(ctx) {
+            const { a, b } = ctx.params;
+            return `${parseInt(a) + parseInt(b)} is from ${broker.nodeID} `;
+        }
+    }
+});
+
+broker.start();
+//Start REPL mode.
+broker.repl()
+////////////////////////////////////////////////////////////////////////////////////////////
+
+Reslience:Fault tolerance :fail over
+
+What if 
+ ->server is down
+ ->service is not responding for long time
+ ->service is slow than expected time
+
+
+As a system, system should respond to the end user with at least some result, if not , then
+it would be very diffcult.
+
+
+How do i provide falut-tolerance / fail over?
+
+ Molcular provides lot of fail over mechanisms.
+
+Implementations:
+
+1.fallback
+  "Fallback feature is useful, when you don’t want to give back errors to the users. Instead, call an other action or return some common content".
+
+Please note, 
+ "this fallback response will only be used if the error occurs within action handler".
+
+
+styles to configure actions:
+
+Style 1:
+
+actions: {
+        add(ctx) {
+            const { a, b } = ctx.params;
+            return `${parseInt(a) + parseInt(b)} is from ${broker.nodeID} `;
+        }
+    }
+
+Style 2:
+
+actions: {
+            add: {
+                 fallback: (ctx, err) => "Some cached result",
+                  async handler(ctx) {
+                        const result = await ctx.call('WelcomeService.sayWelcome');
+                        return 'Hello Moleculer!' + result;
+                  }
+            }
+      }
+
+Testing scenario : what if all nodes down.
+
+
+
+
+2.Retry Options:
+There is an exponential backoff retry solution. It can recall failed requests.
+
+   retryPolicy: {
+        enabled: true,
+        retries: 5,
+        delay: 100,
+        maxDelay: 2000,
+        factor: 2,
+        check: err => err && !!err.retryable
+    }
+
+enabled	Boolean	false	Enable feature.
+retries	Number	5	Count of retries.
+delay	Number	100	First delay in milliseconds.
+maxDelay	Number	2000	Maximum delay in milliseconds.
+factor	Number	2	Backoff factor for delay. 2 means exponential backoff.
+check	Function	err && !!err.retryable	A function to check failed requests
+
+
+Testing :
+
+1.Add Options at broker level / Service level
+
+const nodeOne = new ServiceBroker({
+      hotReload: true,
+      nodeID: 'IBM-Server-1',
+      //transporter: "nats://localhost:4222"
+      transporter: "redis://localhost:6379",
+      registry: {
+            strategy: "Random"
+      },
+      retryPolicy: {
+            enabled: true,
+            retries: 3,
+            delay: 1000,
+            maxDelay: 2000,
+            factor: 2,
+            check: err => "Unable to Reach Service"
+      }
+});
+
+3.Circuit Breaker :
+
+The Circuit Breaker can prevent an application from repeatedly trying to execute an operation that’s likely to fail. Allowing it to continue without waiting for the fault to be fixed or wasting CPU cycles while it determines that the fault is long lasting. The Circuit Breaker pattern also enables an application to detect whether the fault has been resolved. If the problem appears to have been fixed, the application can try to invoke the operation.
+
+
+
+const nodeOne = new ServiceBroker({
+      hotReload: true,
+      nodeID: 'IBM-Server-1',
+      //transporter: "nats://localhost:4222"
+      transporter: "redis://localhost:6379",
+      registry: {
+            strategy: "Random"
+      },
+      // retryPolicy: {
+      //       enabled: true,
+      //       retries: 3,
+      //       delay: 1000,
+      //       maxDelay: 2000,
+      //       factor: 2,
+      //       check: err => "err && !!err.retryable"
+      // }
+      circuitBreaker: {
+            enabled: true,
+            threshold: 0.5,
+            check: err => {
+                  console.log('Circuit Breaker is enabled err.code);
+                  return err && err.code >= 500
+            }
+
+      }
+});
+
+2.bulkhead options
+..................
+ "Bulkhead feature is implemented in Moleculer framework to control the concurrent request handling of actions".
+
+Broker level:
+const broker = new ServiceBroker({
+    bulkhead: {
+        enabled: true,
+        concurrency: 3,
+        maxQueueSize: 10,
+    }
+});
+
+The concurrency value restricts the concurrent request executions.
+
+If the maxQueueSize is bigger than 0, broker stores the additional requests in a queue if all slots are taken. 
+
+If the queue size reaches the maxQueueSize limit or it is 0, broker will throw QueueIsFull exception for every addition requests.
+
+........................................................................................
+Distributed Timeouts:
+....................
+Timeout can be set for service calling. It can be set globally in broker options, or in calling options.
+If timeout is defined and request is timed out, broker will throw a RequestTimeoutError error.
+...................................................................................
+How to Access Micro services from out side?
+
+  via Mobile Apps , Browers
+
+
+ Mobile/Browser-------http-------WebContainer-----Distributed App(MS)
+
+
+If i want to call ms , you have to create ms as "REST Endpoint"
+
+ All ms not rest end point, but a REST ENDPOINT can act as Microservice.
+
+
+Moleculer Runner : Building Realtime Projects so easy.
+
+What is the problem with previous approach?
+
+Points: 
+
+1.A ServiceBroker can have many Services,each Broker represents a node instance.
+  If i want to run multiple nodes, i need to run separate process: which does not scale in   production.
+
+2.An Application(as part of Big Application), you cant have many service broker in single code base : which is not ms architecture.
+   Create each application in a separte Service Broker, which is really difficult.
+   Running multiple nodes on each application which is even difficult.
+
+Solution: Moleculer Runner 
+
+  With it you don’t need to create a ServiceBroker instance with options, but a moleculer.config.js or moleculer.config.json file in the root of repo.
+
+.............................................................................................
+
+Use case : Create ECOMMERCE Project 
+
+                                ECOMMERCE 
+				  |
+			---------------------------------
+			|			       |
+		    CART				    Billing
+
+
+
+Here i am going to create two projects
+->cart
+->billing
+
+Steps:
+1.cart project
+
+>mkdir ecommerce
+
+>cd ecommerce
+
+ecommerce>mkdir cart
+
+ecommerce>cd cart
+
+ecommerce/cart> npm init
+
+package.json dependencies
+"dependencies": {
+    "ioredis": "^4.14.1",
+    "moleculer": "^0.13.11",
+    "moleculer-repl": "^0.6.1",
+    "moleculer-zipkin": "^0.2.2",
+    "nats": "^1.3.2",
+    "redlock": "^4.0.0"
+  },
+>npm install
+
+ecommerce/cart>mkdir services
+
+Create broker config file  : name can be any thing but follow default convention
+
+ecommerce/cart> moleculer.dev.config.js
+
+broker basic options : you can add all config what ever you have learned in previous 
+tutorial
+
+moleculer.dev.config.js
+
+module.exports = {
+      nodeID: "ibm-cart-server",
+      logger: true,
+      logLevel: "info",
+      transporter: "redis://localhost:6379",
+      requestTimeout: 5 * 1000,
+
+      circuitBreaker: {
+            enabled: true
+      },
+
+      metrics: true
+}
+
+
+configure moleculer-runner in scripts sections.
+"scripts": {
+    "dev": "moleculer-runner --repl --hot --config moleculer.dev.config.js --instances=2  services"
+  }
+
+start in repl mode
+make hot reloading
+load broker config file 
+start 2 nodes (--instances)
+point to services folder : to scan all files ends with "filename.service.js"
+
+
+>create service file and add actions : try to connect with billingservice which separate project
+
+cart.service.js
+
+"use strict"
+
+module.exports = {
+      name: 'cartservice',
+      actions: {
+            async checkout(ctx) {
+                  const billingInfo = await ctx.call('billingservice.process');
+                  return billingInfo;
+            }
+      }
+}
+
+.................................XXXXXXXXXXXXXXXXXXXXXXX...................................
+
+
+1.billing project
+
+
+>cd ecommerce
+
+ecommerce>mkdir billing
+
+ecommerce>cd billing
+
+ecommerce/billing> npm init
+
+package.json dependencies
+"dependencies": {
+    "ioredis": "^4.14.1",
+    "moleculer": "^0.13.11",
+    "moleculer-repl": "^0.6.1",
+    "moleculer-zipkin": "^0.2.2",
+    "nats": "^1.3.2",
+    "redlock": "^4.0.0"
+  },
+>npm install
+
+ecommerce/billing>mkdir services
+
+Create broker config file  : name can be any thing but follow default convention
+
+ecommerce/billing> moleculer.dev.config.js
+
+broker basic options : you can add all config what ever you have learned in previous 
+tutorial
+
+moleculer.dev.config.js
+
+"use strict"
+module.exports = {
+      nodeID: "ibm-billing-server",
+      logger: true,
+      logLevel: "info",
+      transporter: "redis://localhost:6379",
+      requestTimeout: 5 * 1000,
+
+      circuitBreaker: {
+            enabled: true
+      },
+
+      metrics: true
+}
+
+
+configure moleculer-runner in scripts sections.
+"scripts": {
+    "dev": "moleculer-runner --repl --hot --config moleculer.dev.config.js --instances=5  services"
+  }
+
+start in repl mode
+make hot reloading
+load broker config file 
+start 2 nodes (--instances)
+point to services folder : to scan all files ends with "filename.service.js"
+
+
+>create service file and add actions : try to connect with billingservice which separate project
+
+billing.service.js
+"use strict"
+
+module.exports = {
+      name: 'billingservice',
+      actions: {
+            async process(ctx) {
+                  return {
+                        billno: 'A0001X98',
+                        product: 'Lenvo Think Pad P2 Mobile Edition',
+                        qty: 1,
+                        price: 2000,
+                        message: this.broker.nodeID
+                  }
+            }
+      }
+}
+
+Note: both projects should be executed in a separate command Prompt
+
+.................................XXXXXXXXXXXXXXXXXXXXXXX...................................
+
+As of now , we have seen how to create brokers,services
+and we have tested on console.
+
+What if i want to expose as rest end point.
+
+API GateWay:
+
+Molecular provides apigate as service. you can create api gateway separate app.
+
+Steps
+
+create new Project called "apiGateWay"
+
+As of now , we have seen how to create brokers,services
+and we have tested on console.
+
+What if i want to expose as rest end point.
+
+API GateWay:
+
+Molecular provides apigate as service. you can create api gateway separate app.
+
+Steps
+
+create new Project called "apiGateWay"
+
+
+>cd ecommerce
+
+ecommerce>mkdir apiGateWay
+
+ecommerce/apiGateWay>npm init
+
+basic package.json dependencies: copy from previous projects
+
+ "dependencies": {
+    "ioredis": "^4.14.1",
+    "moleculer": "^0.13.11",
+    "moleculer-repl": "^0.6.1",
+    "moleculer-zipkin": "^0.2.2",
+    "nats": "^1.3.2",
+    "redlock": "^4.0.0"
+  }
+
+The moleculer-web is the official API gateway service for Moleculer framework. 
+ "Use it to publish your services as RESTful APIs"
+
+>npm install moleculer-web 
+
+ "dependencies": {
+    "ioredis": "^4.14.1",
+    "moleculer": "^0.13.11",
+    "moleculer-repl": "^0.6.1",
+    "moleculer-web": "^0.8.5",
+    "moleculer-zipkin": "^0.2.2",
+    "nats": "^1.3.2",
+    "redlock": "^4.0.0"
+  }
+
+
+broker config file
+
+moleculer.config.js
+
+"use strict"
+
+module.exports = {
+      nodeID: "ibm-gateway-server",
+      logger: true,
+      logLevel: "info",
+      transporter: "redis://localhost:6379",
+      requestTimeout: 5 * 1000,
+
+      circuitBreaker: {
+            enabled: true
+      },
+
+      metrics: true
+}
+
+Service config file:
+
+api.gateway.service.js
+
+"use strict"
+const ApiGwService = require("moleculer-web");
+
+module.exports = {
+      name: 'api',
+      mixins: [ApiGwService],
+      settings: {
+            // Change port setting
+            port: process.env.port || 3000,
+            routes: [{
+                  path: "/api",
+                  whitelist: [
+                        // Access to any actions in all services under "/api" URL
+                        "**"
+                  ],
+                  aliases: {
+                        "GET cart/checkout": "cartservice.checkout"
+                  },
+                  // Disable direct URLs (`/posts/list` or `/posts.list`)
+                  mappingPolicy: "restrict"
+            }]
+      }
+
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
+
+Distributed Events
+
+ broker.broadcast('order.created',order) one - many
+ broker.emit('hello',hello) - one to one
+
 
 
